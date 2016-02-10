@@ -16,20 +16,21 @@ class AirHockeyRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
     companion object {
 
-        private val U_COLOR = "u_Color"
+        private val A_COLOR = "a_Color"
+        private val COLOR_COMPONENT_COUNT = 3
 
         private val A_POSITION = "a_Position"
-
-        private val POINT_SIZE = "point_size"
 
         private val POSITION_COMPONENT_COUNT = 2
 
         private val BYTES_PER_FLOAT = 4
+
+        private val STRIDE = (POSITION_COMPONENT_COUNT + COLOR_COMPONENT_COUNT) * BYTES_PER_FLOAT
     }
 
-    private var uColorLocation: Int = 0
-    private var aPositionLocation: Int = 0
-    private var pointSize: Int = 0
+    private var aColorLocation = 0
+    private var aPositionLocation = 0
+
     private val vertextData: FloatBuffer
 
     private var program: Int = 0
@@ -41,23 +42,25 @@ class AirHockeyRenderer(private val context: Context) : GLSurfaceView.Renderer {
     init {
         isLoggingEnabled = context.resources.getBoolean(R.bool.isLoggingEnabled)
 
-        val tableVerticesWithTriangles = floatArrayOf(//triangle 1
-                -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+        val tableVerticesWithTriangles = floatArrayOf(
+                //X Y R G B
 
-                //triangle 2
-                -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
+                //triangle fan
+                0f, 0f, 1f, 1f, 1f,
+                -0.5f, -0.5f, 0.7f, 0.7f, 0.7f,
+                0.5f, -0.5f, 0.7f, 0.7f, 0.7f,
+                0.5f, 0.5f, 0.7f, 0.7f, 0.7f,
+                -0.5f, 0.5f, 0.7f, 0.7f, 0.7f,
+                -0.5f, -0.5f, 0.7f, 0.7f, 0.7f,
 
                 //line 1
-                -0.5f, 0f, 0.5f, 0f,
+                -0.5f, 0f, 1f, 0f, 0f,
+                0.5f, 0f, 1f, 0f, 0f,
 
                 // mallet
-                -0f, -0.25f, 0f, 0.25f,
-
-                // puck
-                0f, 0f,
-
-                //border
-                0f, -1f, 0f, 1f)
+                0f, -0.25f, 0f, 0f, 1f,
+                0f, 0.25f, 1f, 0f, 0f
+        )
 
         vertextData = ByteBuffer.allocateDirect(tableVerticesWithTriangles.size * BYTES_PER_FLOAT).order(ByteOrder.nativeOrder()).asFloatBuffer()
 
@@ -76,15 +79,20 @@ class AirHockeyRenderer(private val context: Context) : GLSurfaceView.Renderer {
         ShaderHelper.validateProgram(program)
         glUseProgram(program)
 
-        uColorLocation = glGetUniformLocation(program, U_COLOR)
-        pointSize = glGetUniformLocation(program, POINT_SIZE)
+        aColorLocation = glGetAttribLocation(program, A_COLOR)
 
         aPositionLocation = glGetAttribLocation(program, A_POSITION)
 
         vertextData.position(0)
-        glVertexAttribPointer(aPositionLocation, POSITION_COMPONENT_COUNT, GL_FLOAT, false, 0, vertextData)
+        glVertexAttribPointer(aPositionLocation, POSITION_COMPONENT_COUNT, GL_FLOAT, false, STRIDE, vertextData)
 
         glEnableVertexAttribArray(aPositionLocation)
+
+
+        vertextData.position(POSITION_COMPONENT_COUNT)
+        glVertexAttribPointer(aColorLocation, COLOR_COMPONENT_COUNT, GL_FLOAT, false, STRIDE, vertextData)
+
+        glEnableVertexAttribArray(aColorLocation)
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
@@ -94,26 +102,12 @@ class AirHockeyRenderer(private val context: Context) : GLSurfaceView.Renderer {
     override fun onDrawFrame(gl: GL10) {
         glClear(GL_COLOR_BUFFER_BIT)
 
-        glUniform4f(uColorLocation, 1.0f, 1.0f, 1.0f, 1.0f)
-        glDrawArrays(GL_TRIANGLES, 0, 6)
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 6)
 
-        glUniform4f(uColorLocation, 1.0f, 0.0f, 0.0f, 1.0f)
         glDrawArrays(GL_LINES, 6, 2)
 
-        glUniform1f(pointSize, 20.0f)
-
-        glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f)
         glDrawArrays(GL_POINTS, 8, 1)
 
-        glUniform4f(uColorLocation, 1.0f, 0.0f, 1.0f, 1.0f)
         glDrawArrays(GL_POINTS, 9, 1)
-
-        glUniform1f(pointSize, 15.0f)
-
-        glUniform4f(uColorLocation, 0.0f, 0.0f, 0.0f, 1.0f)
-        glDrawArrays(GL_POINTS, 10, 1)
-
-        glUniform4f(uColorLocation, 0.0f, 0.0f, 0.0f, 1.0f)
-        glDrawArrays(GL_LINES, 11, 2)
     }
 }
